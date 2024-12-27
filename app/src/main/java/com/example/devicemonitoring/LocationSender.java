@@ -71,6 +71,13 @@ public class LocationSender {
     }
 
     private void showToast(String message) {
-        ((Activity) context).runOnUiThread(() -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show());
+        // Kiểm tra xem context có phải là Activity không
+        if (context instanceof Activity) {
+            ((Activity) context).runOnUiThread(() -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show());
+        } else {
+            // Nếu không phải Activity (ví dụ là Service), dùng Application context để hiển thị Toast
+            Toast.makeText(context.getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+        }
     }
+
 }

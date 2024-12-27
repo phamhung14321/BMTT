@@ -3,13 +3,32 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Thêm quyền truy cập Internet -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
+    <!-- Quyền truy cập mạng và Internet -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- Thêm quyền truy cập vị trí chính xác -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
-    <!-- Thêm quyền truy cập vị trí chung (nếu cần) -->
+    <!-- Quyền truy cập vị trí chính xác và chung -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- Quyền truy cập vào camera -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Quyền truy cập dịch vụ foreground -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- Quyền truy cập vào bộ nhớ ngoài (Lưu trữ và đọc) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+    <!-- Quyền truy cập quyền hệ thống (Thông báo trên màn hình) -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:usesCleartextTraffic="true"
@@ -32,7 +51,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service android:name=".ScreenshotService" android:enabled="true" android:exported="false"/>
+        <service
+            android:name=".LocationForegroundService"
+            android:foregroundServiceType="location" />
     </application>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
 </manifest>
