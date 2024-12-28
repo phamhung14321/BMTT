@@ -10,7 +10,7 @@
     <!-- Quyền truy cập mạng và Internet -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <!-- Quyền truy cập vị trí chính xác và chung -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -29,7 +29,6 @@
 
     <!-- Quyền truy cập quyền hệ thống (Thông báo trên màn hình) -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-
     <application
         android:usesCleartextTraffic="true"
         android:allowBackup="true"
@@ -51,10 +50,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name=".ScreenshotService" android:enabled="true" android:exported="false"/>
         <service
             android:name=".LocationForegroundService"
             android:foregroundServiceType="location" />
+        <service
+            android:name=".ScreenshotService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection"
+            tools:ignore="ForegroundServicePermission" />
     </application>
 
 </manifest>

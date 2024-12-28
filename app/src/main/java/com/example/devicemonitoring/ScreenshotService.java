@@ -1,30 +1,29 @@
 package com.example.devicemonitoring;
 
-import static android.companion.CompanionDeviceManager.RESULT_CANCELED;
-import static android.companion.CompanionDeviceManager.RESULT_OK;
-import static android.graphics.PixelFormat.RGBA_8888;
-
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
-import android.hardware.display.DisplayManager;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
 
+import androidx.core.app.NotificationCompat;
+
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import okhttp3.MediaType;
@@ -36,128 +35,146 @@ import okhttp3.Response;
 
 public class ScreenshotService extends Service {
     private static final String TAG = "ScreenshotService";
-    private Handler handler = new Handler();
-    private Runnable screenshotRunnable;
+    private static final String CHANNEL_ID = "ScreenshotServiceChannel";
     private MediaProjection mediaProjection;
     private ImageReader imageReader;
+    private Handler handler;
 
-    private MediaProjectionManager mediaProjectionManager;
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        createNotificationChannel();
+        startForeground(1, createNotification());
+        handler = new Handler(Looper.getMainLooper());
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        mediaProjectionManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
-        int resultCode = intent.getIntExtra("resultCode", RESULT_CANCELED);
+        int resultCode = intent.getIntExtra("resultCode", 0);
         Intent data = intent.getParcelableExtra("data");
 
-        if (resultCode == RESULT_OK && data != null) {
-            mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
-            startScreenshot();
+        MediaProjectionManager mediaProjectionManager =
+                (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
+        mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
 
-            // Chụp màn hình mỗi 10 giây
-            screenshotRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    captureScreenshot();
-                    handler.postDelayed(this, 10000);  // 10 giây
-                }
-            };
-            handler.post(screenshotRunnable);
+        if (mediaProjection != null) {
+            startScreenshot();
         } else {
+            Log.e(TAG, "MediaProjection is null.");
             stopSelf();
         }
 
         return START_STICKY;
     }
 
-    private void startScreenshot() {
-        // Khởi tạo ImageReader cho việc chụp màn hình
-        WindowManager windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        Display display = windowManager.getDefaultDisplay();
-        DisplayMetrics metrics = new DisplayMetrics();
-        display.getRealMetrics(metrics);
-        int width = metrics.widthPixels;
-        int height = metrics.heightPixels;
-        int density = getResources().getDisplayMetrics().densityDpi;
-
-        imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
-        Surface surface = imageReader.getSurface();
-        mediaProjection.createVirtualDisplay(
-                "Screenshot",
-                width,
-                height,
-                density,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                surface,
-                null,
-                null
-        );
-
-        imageReader.setOnImageAvailableListener(reader -> {
-            Image image = reader.acquireLatestImage();
-            if (image != null) {
-                Image.Plane[] planes = image.getPlanes();
-                ByteBuffer buffer = planes[0].getBuffer();
-                Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-                bitmap.copyPixelsFromBuffer(buffer);
-                image.close();
-
-                // Lưu ảnh vào file
-                File screenshotFile = new File(getExternalFilesDir(null), "screenshot.png");
-                try (FileOutputStream fileOutputStream = new FileOutputStream(screenshotFile)) {
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream);
-                    fileOutputStream.flush();
-                    Log.d(TAG, "Screenshot saved to " + screenshotFile.getAbsolutePath());
-
-                    // Gửi ảnh lên server
-                    sendImageToServer(screenshotFile);
-                } catch (IOException e) {
-                    Log.e(TAG, "Error saving screenshot: " + e.getMessage());
-                }
-            }
-        }, new Handler(Looper.getMainLooper()));
-    }
-
-
-
-
-
-    private void captureScreenshot() {
-        if (mediaProjection != null) {
-            startScreenshot();
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel serviceChannel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "Screenshot Service",
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            manager.createNotificationChannel(serviceChannel);
         }
     }
 
-    private void sendImageToServer(File file) {
-        Log.d(TAG, "Attempting to send image to server...");
+    private Notification createNotification() {
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("Screenshot Service")
+                .setContentText("Capturing screenshots")
+                .setSmallIcon(R.drawable.ic_location) // Replace with your app's icon
+                .build();
+    }
+
+    private void startScreenshot() {
+        WindowManager windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        DisplayMetrics metrics = new DisplayMetrics();
+        windowManager.getDefaultDisplay().getRealMetrics(metrics);
+
+        int width = metrics.widthPixels;
+        int height = metrics.heightPixels;
+        int density = metrics.densityDpi;
+
+        imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
+        Surface surface = imageReader.getSurface();
+
+        // Register the callback
+        mediaProjection.registerCallback(new MediaProjection.Callback() {
+            @Override
+            public void onStop() {
+                super.onStop();
+                Log.d(TAG, "MediaProjection stopped");
+                if (imageReader != null) {
+                    imageReader.close();
+                    imageReader = null;
+                }
+                stopSelf();
+            }
+        }, handler);
+
+        // Create the virtual display
+        mediaProjection.createVirtualDisplay(
+                "ScreenCapture",
+                width,
+                height,
+                density,
+                0,
+                surface,
+                null,
+                handler
+        );
+
+        // Set listener for image capture
+        imageReader.setOnImageAvailableListener(reader -> {
+            Image image = reader.acquireLatestImage();
+            if (image != null) {
+                saveAndUploadScreenshot(image, width, height);
+                image.close();
+            }
+        }, handler);
+    }
+
+
+    private void saveAndUploadScreenshot(Image image, int width, int height) {
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+        bitmap.copyPixelsFromBuffer(buffer);
+
+        File screenshotFile = new File(getExternalFilesDir(null), "screenshot.png");
+        try (FileOutputStream fos = new FileOutputStream(screenshotFile)) {
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            fos.flush();
+            uploadScreenshot(screenshotFile);
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving screenshot: " + e.getMessage());
+        }
+    }
+
+    private void uploadScreenshot(File file) {
         OkHttpClient client = new OkHttpClient();
         RequestBody requestBody = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
-                .addFormDataPart("image", file.getName(), RequestBody.create(file, MediaType.parse("image/png")))
+                .addFormDataPart("image", file.getName(),
+                        RequestBody.create(file, MediaType.parse("image/png")))
                 .build();
 
         Request request = new Request.Builder()
-                .url("http://10.0.228.80:5000/upload")  // URL của server
+                .url("http://10.12.180.76:5000/upload") // Replace with your server URL
                 .post(requestBody)
                 .build();
 
         new Thread(() -> {
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
-                    Log.e(TAG, "Failed to upload image. Response code: " + response.code());
-                    throw new IOException("Unexpected code " + response);
+                    Log.e(TAG, "Upload failed: " + response.code());
+                } else {
+                    Log.d(TAG, "Upload successful!");
                 }
-                Log.d(TAG, "Image uploaded successfully!");
-            } catch (IOException e) {
-                Log.e(TAG, "Error uploading image: " + e.getMessage());
-                e.printStackTrace();  // In ra chi tiết lỗi
+            } catch (Exception e) {
+                Log.e(TAG, "Error uploading screenshot: " + e.getMessage());
             }
-        }).start();  // Đảm bảo yêu cầu mạng được thực hiện trên background thread
-    }
-
-
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
+        }).start();
     }
 
     @Override
@@ -166,6 +183,10 @@ public class ScreenshotService extends Service {
         if (mediaProjection != null) {
             mediaProjection.stop();
         }
-        handler.removeCallbacks(screenshotRunnable);
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
     }
 }

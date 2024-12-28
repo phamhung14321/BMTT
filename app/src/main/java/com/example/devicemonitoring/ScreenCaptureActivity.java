@@ -49,6 +49,7 @@ public class ScreenCaptureActivity extends Activity {
                 startService(serviceIntent);
             } else {
                 Log.e("ScreenCaptureActivity", "Screen capture permission denied");
+                Toast.makeText(this, "Screen capture permission denied", Toast.LENGTH_SHORT).show();
             }
             finish();
         }

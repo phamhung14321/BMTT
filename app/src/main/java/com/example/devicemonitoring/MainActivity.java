@@ -1,27 +1,42 @@
 package com.example.devicemonitoring;
 
+import static android.content.ContentValues.TAG;
+
+import static com.google.android.material.color.utilities.MaterialDynamicColors.surface;
+
+import android.annotation.SuppressLint;
+import android.hardware.display.DisplayManager;
+import android.media.projection.MediaProjection;
 import android.Manifest;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 public class MainActivity extends AppCompatActivity {
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
+    private static final int REQUEST_CODE_SCREEN_CAPTURE = 102;
+
     private TextView tvLocation;
     private Handler handler = new Handler();
     private Runnable locationRunnable;
     private LocationSender locationSender;
-    private boolean canShowToast = true;  // Biến để kiểm tra xem có thể hiển thị Toast hay không
+    private boolean canShowToast = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,8 +62,44 @@ public class MainActivity extends AppCompatActivity {
                 startLocationUpdates();
             }
         });
+
+        Button btnCaptureAndSend = findViewById(R.id.btnCaptureAndSend);
+        btnCaptureAndSend.setOnClickListener(v -> startScreenCapture());
+
     }
 
+    private void startScreenCapture() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            MediaProjectionManager mediaProjectionManager =
+                    (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
+            if (mediaProjectionManager != null) {
+                Intent captureIntent = mediaProjectionManager.createScreenCaptureIntent();
+                startActivityForResult(captureIntent, REQUEST_CODE_SCREEN_CAPTURE);
+            } else {
+                Log.e(TAG, "MediaProjectionManager is null");
+                Toast.makeText(this, "Screen capture is not supported on this device.", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, "Your Android version does not support screen capture.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @SuppressLint("NewApi")
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_CODE_SCREEN_CAPTURE) {
+            if (resultCode == RESULT_OK && data != null) {
+                Intent serviceIntent = new Intent(this, ScreenshotService.class);
+                serviceIntent.putExtra("resultCode", resultCode);
+                serviceIntent.putExtra("data", data);
+                startForegroundService(serviceIntent);
+            } else {
+                Toast.makeText(this, "Screen capture permission denied.", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
     private void requestLocationPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
@@ -80,19 +131,6 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         handler.post(locationRunnable);
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Bắt đầu gửi vị trí mỗi 2 giây khi có quyền
-                startLocationUpdates();
-            } else {
-                showToast("Quyền vị trí bị từ chối!");  // Gọi phương thức showToast thay vì Toast trực tiếp
-            }
-        }
     }
 
     @Override
