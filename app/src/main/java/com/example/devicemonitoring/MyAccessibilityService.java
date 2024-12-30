@@ -22,10 +22,9 @@ public class MyAccessibilityService extends AccessibilityService {
     private static final String TAG = "AccessibilityService";
     private static final long URL_SEND_INTERVAL = Constants.TIMEOUT_DURATION;
 
-    private String searchUrl=Constants.SERVER_URL;
+    private String searchUrl = Constants.SERVER_URL;
     private String lastSentUrl = null; // Lưu URL cuối cùng đã gửi
     private long lastSentTime = 0;
-
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
@@ -33,7 +32,7 @@ public class MyAccessibilityService extends AccessibilityService {
 
         // Xử lý sự kiện nhấn (click) và thay đổi nội dung cửa sổ
         if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED ||
-              event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+                event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
             handleContentChange(event);
         }
     }
@@ -42,11 +41,12 @@ public class MyAccessibilityService extends AccessibilityService {
         AccessibilityNodeInfo nodeInfo = event.getSource();
         if (nodeInfo != null) {
             String url = extractUrlFromNodeInfo(nodeInfo);
+            String title = extractTitleFromNodeInfo(nodeInfo); // Lấy title từ nodeInfo
             nodeInfo.recycle();
 
             if (url != null) {
                 Log.d(TAG, "Detected URL: " + url);
-                sendSearchToServer(url);
+                sendSearchToServer(url, title); // Gửi cả URL và title
             } else {
                 Log.d(TAG, "No URL found in the event.");
             }
@@ -85,6 +85,32 @@ public class MyAccessibilityService extends AccessibilityService {
         return null;
     }
 
+    private String extractTitleFromNodeInfo(AccessibilityNodeInfo nodeInfo) {
+        if (nodeInfo == null) return null;
+
+        // Lấy title từ text của nút hiện tại
+        if (nodeInfo.getText() != null) {
+            return nodeInfo.getText().toString();
+        }
+
+        // Lấy title từ content description của nút hiện tại
+        if (nodeInfo.getContentDescription() != null) {
+            return nodeInfo.getContentDescription().toString();
+        }
+
+        // Kiểm tra các nút con
+        for (int i = 0; i < nodeInfo.getChildCount(); i++) {
+            AccessibilityNodeInfo childNode = nodeInfo.getChild(i);
+            if (childNode != null) {
+                String title = extractTitleFromNodeInfo(childNode);
+                childNode.recycle();
+                if (title != null) return title;
+            }
+        }
+
+        return null;
+    }
+
     private String extractUrlFromText(String text) {
         if (text == null || text.isEmpty()) return null;
 
@@ -100,33 +126,7 @@ public class MyAccessibilityService extends AccessibilityService {
         return null;
     }
 
-    private void handleClickEvent(AccessibilityEvent event) {
-        AccessibilityNodeInfo nodeInfo = event.getSource();
-        if (nodeInfo != null) {
-            String url = extractUrlFromNodeInfo(nodeInfo);
-            nodeInfo.recycle();
-
-            if (url != null) {
-                Log.d(TAG, "Detected URL: " + url);
-                sendSearchToServer(url);
-            }
-        }
-    }
-
-
-
-    private String normalizeUrl(String url) {
-        if (url == null) return null;
-
-        url = url.replace("›", "").replace("...", "").trim();
-        if (!url.startsWith("http")) {
-            url = "https://" + url;
-        }
-
-        return url;
-    }
-
-    private void sendSearchToServer(String searchText) {
+    private void sendSearchToServer(String searchText, String title) {
         long currentTime = System.currentTimeMillis();
 
         if (currentTime - lastSentTime < URL_SEND_INTERVAL) {
@@ -147,12 +147,12 @@ public class MyAccessibilityService extends AccessibilityService {
         lastSentUrl = searchText;
         lastSentTime = currentTime;
 
-        String url = searchUrl+"/submit-search";
+        String url = searchUrl + "/submit-search";
 
         OkHttpClient client = new OkHttpClient();
         RequestBody requestBody = new FormBody.Builder()
                 .add("link", searchText)
-                .add("timestamp", String.valueOf(currentTime))
+                .add("title", title) // Thêm title vào request body
                 .build();
 
         Request request = new Request.Builder()
