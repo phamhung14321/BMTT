@@ -33,7 +33,7 @@ public class LocationSender {
         RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
-                .url("http://10.0.228.80:5000/home/location")
+                .url("http://192.168.2.16:5000/home/location")
                 .post(body)
                 .build();
 

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">DeviceMonitoring</string>
+    <string name="accessibility_service_description">Dịch vụ trợ năng cho ứng dụng của bạn</string>
 </resources>

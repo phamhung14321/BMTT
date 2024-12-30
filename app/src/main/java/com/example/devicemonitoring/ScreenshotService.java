@@ -160,7 +160,7 @@ public class ScreenshotService extends Service {
                 .build();
 
         Request request = new Request.Builder()
-                .url("http://10.12.180.76:5000/upload") // Replace with your server URL
+                .url("http://192.168.2.16:5000/upload") // Replace with your server URL
                 .post(requestBody)
                 .build();
 
