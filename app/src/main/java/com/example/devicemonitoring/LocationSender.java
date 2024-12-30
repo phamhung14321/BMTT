@@ -21,9 +21,9 @@ import okhttp3.Response;
 public class LocationSender {
     private FusedLocationProviderClient fusedLocationProviderClient;
     private Context context;
-
     public LocationSender(Context context) {
         this.context = context;
+
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context);
     }
 
@@ -33,7 +33,7 @@ public class LocationSender {
         RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
-                .url("http://192.168.2.16:5000/home/location")
+                .url(Constants.SERVER_URL+"/home/location")
                 .post(body)
                 .build();
 

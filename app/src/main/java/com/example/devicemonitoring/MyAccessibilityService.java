@@ -20,9 +20,9 @@ import okhttp3.Response;
 public class MyAccessibilityService extends AccessibilityService {
 
     private static final String TAG = "AccessibilityService";
-    private static final long URL_SEND_INTERVAL = 2000; // 2 giây
+    private static final long URL_SEND_INTERVAL = Constants.TIMEOUT_DURATION;
 
-    private String searchUrl="http://192.168.2.16:5000";
+    private String searchUrl=Constants.SERVER_URL;
     private String lastSentUrl = null; // Lưu URL cuối cùng đã gửi
     private long lastSentTime = 0;
 

@@ -17,6 +17,7 @@ public class LocationForegroundService extends Service {
 
     private LocationSender locationSender;
 
+    private String SERVER_URL = Constants.SERVER_URL;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -52,7 +53,7 @@ public class LocationForegroundService extends Service {
             while (true) {
                 try {
                     locationSender.getLocationAndSend();
-                    Thread.sleep(5000); // Gửi vị trí mỗi 5 giây
+                    Thread.sleep(Constants.TIMEOUT_DURATION); // Gửi vị trí mỗi 5 giây
                 } catch (InterruptedException e) {
                     Log.e("ServiceError", "Lỗi khi chờ: " + e.getMessage());
                 }

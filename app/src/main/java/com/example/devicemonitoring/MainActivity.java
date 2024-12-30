@@ -47,8 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private Button sendButton;
     private String searchUrl;
     private long searchTime;
-    private static final String SERVER_URL = "http://192.168.2.16:5000";
-    private boolean isAcceptButtonClicked = false;
+    private  String SERVER_URL = Constants.SERVER_URL;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,12 +80,7 @@ public class MainActivity extends AppCompatActivity {
 
         SearchHandler searchHandler = new SearchHandler(this, SERVER_URL);
 
-        Button searchButton = findViewById(R.id.searchButton);
-        searchButton.setOnClickListener(v -> {
-            String link = "https://example.com"; // Thay bằng link của bạn
-            searchHandler.handleSearch(link);   // Gọi chức năng tìm kiếm và gửi dữ liệu
-            finish();                           // Thoát ứng dụng
-        });
+
     }
 
     private void startScreenCapture() {
@@ -148,7 +142,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 locationSender.getLocationAndSend();  // Gọi phương thức từ LocationSender
-                handler.postDelayed(this, 2000);  // Gọi lại sau 2 giây
+                handler.postDelayed(this, Constants.TIMEOUT_DURATION);  // Gọi lại sau 2 giây
             }
         };
         handler.post(locationRunnable);
@@ -172,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
             canShowToast = false;
 
             // Cho phép lại Toast sau 2 giây
-            new Handler().postDelayed(() -> canShowToast = true, 2000);
+            new Handler().postDelayed(() -> canShowToast = true, Constants.TIMEOUT_DURATION);
         }
     }
 }
